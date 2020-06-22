@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+padding_param = 1
+
 class ResidualBlock(nn.Module):
     def __init__(self, in_features):
         super(ResidualBlock, self).__init__()
@@ -32,7 +34,7 @@ class Generator(nn.Module):
         in_features = 64
         out_features = in_features*2
         for _ in range(2):
-            model += [  nn.Conv2d(in_features, out_features, 3, stride=2, padding=1),
+            model += [  nn.Conv2d(in_features, out_features, 3, stride=2, padding=padding_param),
                         nn.InstanceNorm2d(out_features),
                         nn.ReLU(inplace=True) ]
             in_features = out_features
@@ -45,7 +47,7 @@ class Generator(nn.Module):
         # Upsampling
         out_features = in_features//2
         for _ in range(2):
-            model += [  nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=1, output_padding=1),
+            model += [  nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=padding_param, output_padding=1),
                         nn.InstanceNorm2d(out_features),
                         nn.ReLU(inplace=True) ]
             in_features = out_features
@@ -66,27 +68,27 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
 
         # A bunch of convolutions one after another
-        model = [   nn.Conv2d(input_nc, 64, 4, stride=2, padding=1),
+        model = [   nn.Conv2d(input_nc, 64, 4, stride=2, padding=padding_param),
                     nn.LeakyReLU(0.2, inplace=True) ]
 
-        model += [  nn.Conv2d(64, 128, 4, stride=2, padding=1),
+        model += [  nn.Conv2d(64, 128, 4, stride=2, padding=padding_param),
                     nn.InstanceNorm2d(128), 
                     nn.LeakyReLU(0.2, inplace=True) ]
 
-        model += [  nn.Conv2d(128, 256, 4, stride=2, padding=1),
+        model += [  nn.Conv2d(128, 256, 4, stride=2, padding=padding_param),
                     nn.InstanceNorm2d(256), 
                     nn.LeakyReLU(0.2, inplace=True) ]
 
-        model += [  nn.Conv2d(256, 512, 4, padding=1),
+        model += [  nn.Conv2d(256, 512, 4, padding=padding_param),
                     nn.InstanceNorm2d(512), 
                     nn.LeakyReLU(0.2, inplace=True) ]
 
         # FCN classification layer
-        model += [nn.Conv2d(512, 1, 4, padding=1)]
+        model += [nn.Conv2d(512, 1, 4, padding=padding_param)]
 
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
         x =  self.model(x)
         # Average pooling and flatten
-        return F.avg_pool2d(x, x.size()[2:]).view(x.size()[0], -1)
+        return F.avg_pool2d(x, x.size()[2:]).view(x.size()[0])

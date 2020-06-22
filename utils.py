@@ -36,9 +36,9 @@ class Logger():
 
         for i, loss_name in enumerate(losses.keys()):
             if loss_name not in self.losses:
-                self.losses[loss_name] = losses[loss_name].data[0]
+                self.losses[loss_name] = losses[loss_name].data
             else:
-                self.losses[loss_name] += losses[loss_name].data[0]
+                self.losses[loss_name] += losses[loss_name].data
 
             if (i+1) == len(losses.keys()):
                 sys.stdout.write('%s: %.4f -- ' % (loss_name, self.losses[loss_name]/self.batch))
@@ -60,11 +60,19 @@ class Logger():
         if (self.batch % self.batches_epoch) == 0:
             # Plot losses
             for loss_name, loss in self.losses.items():
+                #try:
+                #if True:
+                     #print("loss_name:", loss_name)
+                     #print("X: ", np.array([self.epoch]))
+                     #print("Y: ", np.array([loss.cpu().numpy()/self.batch]))
                 if loss_name not in self.loss_windows:
-                    self.loss_windows[loss_name] = self.viz.line(X=np.array([self.epoch]), Y=np.array([loss/self.batch]), 
+                     self.loss_windows[loss_name] = self.viz.line(X=np.array([self.epoch]), Y=np.array([loss.cpu().numpy()/self.batch]), 
                                                                     opts={'xlabel': 'epochs', 'ylabel': loss_name, 'title': loss_name})
                 else:
-                    self.viz.line(X=np.array([self.epoch]), Y=np.array([loss/self.batch]), win=self.loss_windows[loss_name], update='append')
+                     self.viz.line(X=np.array([self.epoch]), Y=np.array([loss.cpu().numpy()/self.batch]), win=self.loss_windows[loss_name], update='append')
+                #except:
+                   # print("ENCOUNTERED ERROR WE ALREADY HAD")
+                   # exit()
                 # Reset losses for next epoch
                 self.losses[loss_name] = 0.0
 
