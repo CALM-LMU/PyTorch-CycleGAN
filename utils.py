@@ -4,12 +4,38 @@ import datetime
 import sys
 
 from torch.autograd import Variable
+import torchvision.transforms as transforms
+
 import torch
 from visdom import Visdom
 import numpy as np
+import constants
+
+
+def reverseNormalization(tensor):
+    m = ((-np.asarray(constants.MEAN)/np.asarray(constants.STD)).tolist())
+    s = (1/np.asarray(constants.STD)).tolist()
+    t = transforms.Normalize(m,s)
+    arr = tensor.cpu().detach()
+    return t(arr[0])
 
 def tensor2image(tensor):
-    image = 127.5*(tensor[0].cpu().float().numpy() + 1.0)
+    #print("\ntensor has shape", tensor.cpu().detach().numpy().shape)
+    #image = 127.5*(tensor[0].cpu().float().numpy() + 1.0)
+    #print("\nImage should have shape: ",image.shape)
+
+    image = reverseNormalization(tensor)
+    image = image.numpy()
+    #print("image before additive:", image)
+    image = 127.5*(image + 1.0)
+
+    #PASS THRU WITHOUT NORM
+    #image = tensor.cpu().detach()
+    #image = image[0].numpy()
+    #print("image after additive:", image)
+    #print("shape: ",image.shape)
+
+    #print("Image HAS shape: ", image.shape)
     if image.shape[0] == 1:
         image = np.tile(image, (3,1,1))
     return image.astype(np.uint8)

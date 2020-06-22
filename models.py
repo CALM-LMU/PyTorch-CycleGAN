@@ -1,7 +1,9 @@
 import torch.nn as nn
 import torch.nn.functional as F
+from debugUtils import out
 
 padding_param = 1
+__filePrefix__ = "MODELS"
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_features):
@@ -18,7 +20,10 @@ class ResidualBlock(nn.Module):
         self.conv_block = nn.Sequential(*conv_block)
 
     def forward(self, x):
-        return x + self.conv_block(x)
+        #print(__filePrefix__, "forward Residual Block IN: ", out(x))
+        res = x + self.conv_block(x)
+        #print(__filePrefix__, "forward Residual Block OUT: ", out(res))
+        return res
 
 class Generator(nn.Module):
     def __init__(self, input_nc, output_nc, n_residual_blocks=9):
@@ -61,7 +66,14 @@ class Generator(nn.Module):
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
-        return self.model(x)
+        #print(__filePrefix__, "forward Generator IN: ", out(x))
+        res = self.model(x)
+        s = out(res)
+        if (s[2] == 408 and s[3]==616): #616 is the thing we wanna drop
+            res = res[::1,::1,::1,0:614:1]
+            #print(__filePrefix__, "fixed res: ", out(res))
+        #print(__filePrefix__, "forward Generator OUT: ", out(res))
+        return res
 
 class Discriminator(nn.Module):
     def __init__(self, input_nc):
@@ -89,6 +101,10 @@ class Discriminator(nn.Module):
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
+        #print(__filePrefix__, "forward Discriminator IN: ", out(x))
         x =  self.model(x)
+        #print(__filePrefix__, "forward Discriminator TMP: ", out(x))
+        res = F.avg_pool2d(x, x.size()[2:]).view(x.size()[0])
+        #print(__filePrefix__, "forward Discriminator OUT: ", out(res))
         # Average pooling and flatten
-        return F.avg_pool2d(x, x.size()[2:]).view(x.size()[0])
+        return res

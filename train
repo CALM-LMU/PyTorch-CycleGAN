@@ -15,8 +15,11 @@ from utils import ReplayBuffer
 from utils import LambdaLR
 from utils import Logger
 from utils import weights_init_normal
+from utils import reverseNormalization
 from datasets import ImageDataset
 import os
+from debugUtils import out
+import constants
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1' #"0,1" for the hard stuff
 parser = argparse.ArgumentParser()
@@ -36,6 +39,7 @@ parser.add_argument('--n_cpu', type=int, default=32, help='number of cpu threads
 opt = parser.parse_args()
 print(opt)
 
+__filePrefix__ = "TRAIN"
 scalar = 8
 rescale_size_a = (opt.size_a//scalar)+1
 rescale_size_b = opt.size_b//scalar
@@ -92,7 +96,7 @@ transforms_ = [# transforms.Resize(int(opt.crop_size*1.12), Image.BICUBIC), #Not
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize((177.86, 187.47, 189.8), (13.27, 16.74, 21.21))
+                transforms.Normalize(constants.MEAN, constants.STD)
                ]
 dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True), 
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
@@ -108,16 +112,22 @@ for epoch in range(opt.epoch, opt.n_epochs):
         real_A = Variable(input_A.copy_(batch['A']))
         real_B = Variable(input_B.copy_(batch['B']))
 
+        #print(__filePrefix__, "real_A: ", out(real_A))
+        #print(__filePrefix__, "real_B: ", out(real_B))
+
         ###### Generators A2B and B2A ######
         optimizer_G.zero_grad()
 
         # Identity loss
         # G_A2B(B) should equal B if real B is fed
         same_B = netG_A2B(real_B)
+        #print(__filePrefix__, "same_B: ", out(same_B))
         loss_identity_B = criterion_identity(same_B, real_B)*5.0
+        #print(__filePrefix__, "Idedntity loss same_B: ", out(same_B))
         # G_B2A(A) should equal A if real A is fed
         same_A = netG_B2A(real_A)
         loss_identity_A = criterion_identity(same_A, real_A)*5.0
+        #print(__filePrefix__, "Idedntity loss same_A: ", out(same_A))
 
         # GAN loss
         fake_B = netG_A2B(real_A)
