@@ -19,12 +19,16 @@ def reverseNormalization(tensor):
     arr = tensor.cpu().detach()
     return t(arr[0])
 
+def reverse01Scaling(tensor):
+    return tensor.cpu().detach()[0]*255
+
 def tensor2image(tensor):
     #print("\ntensor has shape", tensor.cpu().detach().numpy().shape)
     #image = 127.5*(tensor[0].cpu().float().numpy() + 1.0)
     #print("\nImage should have shape: ",image.shape)
 
-    image = reverseNormalization(tensor)
+    #image = reverseNormalization(tensor)
+    image = reverse01Scaling(tensor)
     image = image.numpy()
     #print("image before additive:", image)
     image = 127.5*(image + 1.0)

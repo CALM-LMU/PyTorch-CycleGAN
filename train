@@ -7,6 +7,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from PIL import Image
+import customTransforms
+import customLosses
 import torch
 
 from models import Generator
@@ -66,6 +68,7 @@ netD_B.apply(weights_init_normal)
 
 # Lossess
 criterion_GAN = torch.nn.MSELoss()
+
 criterion_cycle = torch.nn.L1Loss()
 criterion_identity = torch.nn.L1Loss()
 
@@ -96,7 +99,8 @@ transforms_ = [# transforms.Resize(int(opt.crop_size*1.12), Image.BICUBIC), #Not
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(constants.MEAN, constants.STD)
+                customTransforms.RescaleToZeroOne() #REQUIRES THE IMAGES TO BE ENCODED IN RGB
+                #transforms.Normalize(constants.MEAN, constants.STD)
                ]
 dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True), 
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
@@ -132,11 +136,15 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # GAN loss
         fake_B = netG_A2B(real_A)
         pred_fake = netD_B(fake_B)
-        loss_GAN_A2B = criterion_GAN(pred_fake, target_real)
+
+        #loss_GAN_A2B = criterion_GAN(pred_fake, target_real)
+        loss_GAN_A2B = torch.mean(pred_fake)
 
         fake_A = netG_B2A(real_B)
         pred_fake = netD_A(fake_A)
-        loss_GAN_B2A = criterion_GAN(pred_fake, target_real)
+        
+        #loss_GAN_B2A = criterion_GAN(pred_fake, target_real)
+        loss_GAN_B2A = torch.mean(pred_fake)
 
         # Cycle loss
         recovered_A = netG_B2A(fake_B)
@@ -147,27 +155,32 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         # Total loss
         loss_G = loss_identity_A + loss_identity_B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB
-        loss_G.backward()
+        loss_G.backward(retain_graph=True)
         
         optimizer_G.step()
         ###################################
 
-        ###### Discriminator A ######
+        ###### Discriminator A ######d
         optimizer_D_A.zero_grad()
 
         # Real loss
         pred_real = netD_A(real_A)
-        loss_D_real = criterion_GAN(pred_real, target_real)
+        pred_fake = netD_A(fake_A)
+
+        loss_D_real = torch.mean(pred_real) - torch.mean(pred_fake)
+        pentalty = customLosses.gradient_penalty(real_A, fake_A, netD_A, 10)
+
+        #criterion_GAN(pred_real, target_real)
 
         # Fake loss
-        fake_A = fake_A_buffer.push_and_pop(fake_A)
-        pred_fake = netD_A(fake_A.detach())
-        loss_D_fake = criterion_GAN(pred_fake, target_fake)
+        #fake_A = fake_A_buffer.push_and_pop(fake_A)
+        #pred_fake = netD_A(fake_A.detach())
+        #loss_D_fake = criterion_GAN(pred_fake, target_fake)
 
         # Total loss
-        loss_D_A = (loss_D_real + loss_D_fake)*0.5
+        #loss_D_A = (loss_D_real + loss_D_fake)*0.5
+        loss_D_A = loss_D_real + pentalty
         loss_D_A.backward()
-
         optimizer_D_A.step()
         ###################################
 
@@ -176,15 +189,19 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         # Real loss
         pred_real = netD_B(real_B)
-        loss_D_real = criterion_GAN(pred_real, target_real)
+        pred_fake = netD_B(fake_B)
+        #loss_D_real = criterion_GAN(pred_real, target_real)
+        loss_D_real = torch.mean(pred_real) - torch.mean(pred_fake)
+        pentalty = customLosses.gradient_penalty(real_B, fake_B, netD_B, 10)
         
         # Fake loss
-        fake_B = fake_B_buffer.push_and_pop(fake_B)
-        pred_fake = netD_B(fake_B.detach())
-        loss_D_fake = criterion_GAN(pred_fake, target_fake)
+        #fake_B = fake_B_buffer.push_and_pop(fake_B)
+        #pred_fake = netD_B(fake_B.detach())
+        #loss_D_fake = criterion_GAN(pred_fake, target_fake)
 
         # Total loss
-        loss_D_B = (loss_D_real + loss_D_fake)*0.5
+        #loss_D_B = (loss_D_real + loss_D_fake)*0.5
+        loss_D_B = loss_D_real + pentalty
         loss_D_B.backward()
 
         optimizer_D_B.step()
