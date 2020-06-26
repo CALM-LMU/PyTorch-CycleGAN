@@ -165,7 +165,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         pred_fake = netD_A(fake_A)
 
         loss_D_real = torch.mean(pred_real) - torch.mean(pred_fake)
-        pentalty = customLosses.gradient_penalty(real_A, fake_A, netD_A, 10)
+        penalty_A = customLosses.gradient_penalty(real_A, fake_A, netD_A, 10)
 
         # Fake loss
         #fake_A = fake_A_buffer.push_and_pop(fake_A)
@@ -173,7 +173,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         #loss_D_fake = criterion_GAN(pred_fake, target_fake)
 
         # Total loss
-        loss_D_A = loss_D_real + pentalty
+        loss_D_A = loss_D_real + penalty_A
         loss_D_A.backward()
         optimizer_D_A.step()
         ###################################
@@ -185,7 +185,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         pred_real = netD_B(real_B)
         pred_fake = netD_B(fake_B)
         loss_D_real = torch.mean(pred_real) - torch.mean(pred_fake)
-        pentalty = customLosses.gradient_penalty(real_B, fake_B, netD_B, 10)
+        penalty_B = customLosses.gradient_penalty(real_B, fake_B, netD_B, 10)
         
         # Fake loss
         #fake_B = fake_B_buffer.push_and_pop(fake_B)
@@ -193,7 +193,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         #loss_D_fake = criterion_GAN(pred_fake, target_fake)
 
         # Total loss
-        loss_D_B = loss_D_real + pentalty
+        loss_D_B = loss_D_real + penalty_B
         loss_D_B.backward()
 
         optimizer_D_B.step()
@@ -202,7 +202,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         # Progress report (http://localhost:8097)
         #if (i%10==0):
         logger.log({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
-                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)}, 
+                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B), 'penalty_A': penalty_A, 'penalty_B': penalty_B}, 
                     images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B, 'same_A':same_A, 'same_B':same_B})
 
     # Update learning rates
