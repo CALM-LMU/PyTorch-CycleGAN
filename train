@@ -23,7 +23,7 @@ import os
 from debugUtils import out
 import constants
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1' #"0,1" for the hard stuff
+os.environ['CUDA_VISIBLE_DEVICES'] = '2' #"0,1" for the hard stuff
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=100000, help='number of epochs of training')
@@ -42,7 +42,7 @@ opt = parser.parse_args()
 print(opt)
 
 __filePrefix__ = "TRAIN"
-scalar = 8
+scalar = 16
 rescale_size_a = (opt.size_a//scalar)+1
 rescale_size_b = opt.size_b//scalar
 if torch.cuda.is_available() and not opt.cuda:
@@ -118,7 +118,6 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         ###### Generators A2B and B2A ######
         optimizer_G.zero_grad()
-
         # Identity loss
         # G_A2B(B) should equal B if real B is fed
         same_B = netG_A2B(real_B)

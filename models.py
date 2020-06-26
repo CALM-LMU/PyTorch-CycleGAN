@@ -1,8 +1,9 @@
 import torch.nn as nn
+import torch
 import torch.nn.functional as F
 from debugUtils import out
 
-padding_param = 1
+padding_param = 0
 __filePrefix__ = "MODELS"
 
 class ResidualBlock(nn.Module):
@@ -50,15 +51,54 @@ class Generator(nn.Module):
             model += [ResidualBlock(in_features)]
 
         # Upsampling
-        out_features = in_features//2
-        for _ in range(2):
-            model += [  nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=padding_param, output_padding=1),
-                        nn.InstanceNorm2d(out_features),
-                        nn.ReLU(inplace=True) ]
-            in_features = out_features
-            out_features = in_features//2
+        # In: (1, 256, 50, 76)
+        scale_factor = 2
+        
+        #model += [
+        #        nn.Conv2d(in_features, in_features*4, kernel_size=3, padding=padding_param),
+        #        nn.PixelShuffle(2),
+        #        nn.InstanceNorm2d(out_features),
+        #        nn.ReLU(inplace=True)
+        #]
 
-        # Output layer
+        #(1, 64, 96, 148)
+        #for _ in range(2):
+        #    model += [
+        #        nn.Conv2d(in_features, in_features * 4, kernel_size=3, padding=padding_param),
+        #        nn.PixelShuffle(scale_factor),
+        #        nn.InstanceNorm2d(in_features),
+        #        nn.ReLU(inplace=True)
+        #    ]
+        #    in_features = in_features*4
+        #(1, 256, 188, 292)
+        
+        model += [
+                nn.Conv2d(in_features, in_features*4, kernel_size=3, padding=padding_param+2),
+                nn.PixelShuffle(2),
+                nn.InstanceNorm2d(in_features),
+                nn.ReLU(inplace=True)
+        ]
+        model += [
+                nn.Conv2d(in_features, in_features, kernel_size=3, padding=padding_param),
+                nn.PixelShuffle(2),
+                nn.InstanceNorm2d(in_features),
+                nn.ReLU(inplace=True)
+        ]
+        # This as is returns (1, 64, 204, 308)
+        # However, one might ask himself whether this is optimal. Let's just assume that yes       
+
+        
+        #out_features = in_features//2
+        #for _ in range(2):
+        #    model += [  nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=padding_param, output_padding=0),
+        #                nn.InstanceNorm2d(out_features),
+        #                nn.ReLU(inplace=True) ]
+        #    in_features = out_features
+        #    out_features = in_features//2
+        #(1, 64, 204, 307)
+
+
+        #Output layer: Expects (1, 64, 204, 307), but we may change feature amount
         model += [  nn.ReflectionPad2d(3),
                     nn.Conv2d(64, output_nc, 7),
                     nn.Tanh() ]
@@ -69,9 +109,14 @@ class Generator(nn.Module):
         #print(__filePrefix__, "forward Generator IN: ", out(x))
         res = self.model(x)
         s = out(res)
-        if (s[2] == 408 and s[3]==616): #616 is the thing we wanna drop
-            res = res[::1,::1,::1,0:614:1]
-            #print(__filePrefix__, "fixed res: ", out(res))
+        #if (s[2] == 408 and s[3]==616): #616 is the thing we wanna drop
+        #    res = res[::1,::1,::1,0:614:1]
+        if (s[2] == 203 and s[3]==307): #We wanna pad 203 to 204
+            padding = (0,0,1,0)
+            res=F.pad(res, padding, "constant", 0)
+        elif (s[2] == 204 and s[3]==308): #We drop one column
+            res = res[::1,::1,::1,0:307:1]
+        
         #print(__filePrefix__, "forward Generator OUT: ", out(res))
         return res
 
