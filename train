@@ -38,10 +38,11 @@ parser.add_argument('--input_nc', type=int, default=1, help='number of channels 
 parser.add_argument('--output_nc', type=int, default=1, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation') #just always put --cuda
 parser.add_argument('--n_cpu', type=int, default=32, help='number of cpu threads to use during batch generation')
+parser.add_argument('--weight_path', type=str, default='', help='Path to saved weight. If not specified start new training')
 opt = parser.parse_args()
 print(opt)
 
-__filePrefix__ = "TRAIN"
+__filePrefix__ = "l"
 scalar = 16
 rescale_size_a = (opt.size_a//scalar)+1
 rescale_size_b = opt.size_b//scalar
@@ -61,10 +62,20 @@ if opt.cuda:
     netD_A.cuda()
     netD_B.cuda()
 
-netG_A2B.apply(weights_init_normal)
-netG_B2A.apply(weights_init_normal)
-netD_A.apply(weights_init_normal)
-netD_B.apply(weights_init_normal)
+if (opt.weight_path==""):
+    netG_A2B.apply(weights_init_normal)
+    netG_B2A.apply(weights_init_normal)
+    netD_A.apply(weights_init_normal)
+    netD_B.apply(weights_init_normal)
+else:
+    netG_A2B.load_state_dict(torch.load(opt.weight_path+"/netG_A2B.pth"))
+    netG_A2B.eval()
+    netG_B2A.load_state_dict(torch.load(opt.weight_path+"/netG_B2A.pth"))
+    netG_B2A.eval()
+    netD_A.load_state_dict(torch.load(opt.weight_path+"/netD_A.pth"))
+    netD_A.eval()
+    netD_B.load_state_dict(torch.load(opt.weight_path+"/netD_B.pth"))
+    netD_B.eval()
 
 # Lossess
 criterion_GAN = torch.nn.MSELoss()

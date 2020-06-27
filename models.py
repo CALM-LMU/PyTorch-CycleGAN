@@ -72,6 +72,32 @@ class Generator(nn.Module):
         #    in_features = in_features*4
         #(1, 256, 188, 292)
         
+
+        #model += [
+        #        nn.Conv2d(in_features, in_features*16, kernel_size=2, stride=2, padding=padding_param+1),
+        #        nn.PixelShuffle(8),
+        #        nn.InstanceNorm2d(in_features),
+        #        nn.ReLU(inplace=True)
+        #]
+
+        #===========================2 LAYERS==SMALLER KERNEL===============================
+        #model += [
+        #        nn.Conv2d(in_features, in_features*4, kernel_size=2, padding=padding_param+1),
+        #        nn.PixelShuffle(2),
+        #        nn.InstanceNorm2d(in_features),
+        #        nn.ReLU(inplace=True)
+        #]
+        #model += [
+        #        nn.Conv2d(in_features, in_features, kernel_size=2, padding=padding_param),
+        #        nn.PixelShuffle(2),
+        #        nn.InstanceNorm2d(in_features),
+        #        nn.ReLU(inplace=True)
+        #]
+        # This as is returns (1, 64, 204, 308)
+        # However, one might ask himself whether this is optimal. Let's just assume that yes       
+        #==================================LAYERNS=============================
+
+        #===========================2 LAYERS=================================
         model += [
                 nn.Conv2d(in_features, in_features*4, kernel_size=3, padding=padding_param+2),
                 nn.PixelShuffle(2),
@@ -86,7 +112,7 @@ class Generator(nn.Module):
         ]
         # This as is returns (1, 64, 204, 308)
         # However, one might ask himself whether this is optimal. Let's just assume that yes       
-
+        #==================================LAYERNS=============================
         
         #out_features = in_features//2
         #for _ in range(2):
@@ -102,7 +128,7 @@ class Generator(nn.Module):
         model += [  nn.ReflectionPad2d(3),
                     nn.Conv2d(64, output_nc, 7),
                     nn.Tanh() ]
-
+        #
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
@@ -111,11 +137,19 @@ class Generator(nn.Module):
         s = out(res)
         #if (s[2] == 408 and s[3]==616): #616 is the thing we wanna drop
         #    res = res[::1,::1,::1,0:614:1]
-        if (s[2] == 203 and s[3]==307): #We wanna pad 203 to 204
+        if (s[2] == 202 and s[3]==306):
+            padding = (1,0,1,1)
+            res=F.pad(res, padding, "constant", 0)
+        elif (s[2] == 203 and s[3]==307): #We wanna pad 203 to 204
             padding = (0,0,1,0)
             res=F.pad(res, padding, "constant", 0)
         elif (s[2] == 204 and s[3]==308): #We drop one column
             res = res[::1,::1,::1,0:307:1]
+            pass
+        elif (s[2] == 208 and s[3]==312): #We drop drop 5 columns and 1 row
+            res = res[::1,::1,0:204:1,0:307:1]
+            pass
+        
         
         #print(__filePrefix__, "forward Generator OUT: ", out(res))
         return res
